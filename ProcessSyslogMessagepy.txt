@@ -1,0 +1,16 @@
+ProcessSyslogMessage(message)
+	If message is GEO IP Block:
+		Get IP Address to Block
+		Get Country
+		get SyslogSource
+		NewIPv4AddressObject(ipAddress, "AUTO_BlackList_GEOIP", 100Days, 100, pyType01)
+
+		messageID=1198
+		eventDateTime=2020-05-16 15:04:17
+		eventSource=97.105.93.2
+		srcZone=WAN
+		dstZone=VPN
+		Country=Singapore
+		IP Address=54.254.165.111
+		Descr=GEO IP Blacklist
+
