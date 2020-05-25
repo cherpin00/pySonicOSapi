@@ -1,0 +1,243 @@
+[2020-05-23 18:52.10]  /drives/c/Users/Caleb/Google Drive/sonicWallAPi
+[Caleb.DESKTOP-ROPLVSM] ➤ ./t1.sh
+++ URL=192.168.71.3:443
+++ PROXY=127.0.0.1:8888
+++ params='--proxy 127.0.0.1:8888 --verbose '
+++ curl --proxy 127.0.0.1:8888 --verbose --insecure -i -u admin:password71 -X POST https://192.168.71.3:443/api/sonicos/auth
+*   Trying 127.0.0.1...
+* TCP_NODELAY set
+* Connected to 127.0.0.1 (127.0.0.1) port 8888 (#0)
+* Establish HTTP proxy tunnel to 192.168.71.3:443
+* Server auth using Basic with user 'admin'
+> CONNECT 192.168.71.3:443 HTTP/1.1
+> Host: 192.168.71.3:443
+> User-Agent: curl/7.50.3
+> Proxy-Connection: Keep-Alive
+>
+< HTTP/1.1 200 Connection Established
+HTTP/1.1 200 Connection Established
+< FiddlerGateway: Direct
+FiddlerGateway: Direct
+< StartTime: 18:52:13.116
+StartTime: 18:52:13.116
+< Connection: close
+Connection: close
+<
+
+* Proxy replied OK to CONNECT request
+* Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+* error setting certificate verify locations, continuing anyway:
+*   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES256-GCM-SHA384
+* Server certificate:
+*  subject: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=192.168.71.3
+*  start date: May 22 16:35:34 2019 GMT
+*  expire date: Aug 20 16:35:34 2022 GMT
+*  issuer: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=DO_NOT_TRUST_FiddlerRoot
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+* Server auth using Basic with user 'admin'
+> POST /api/sonicos/auth HTTP/1.1
+> Host: 192.168.71.3
+> Authorization: Basic YWRtaW46cGFzc3dvcmQ3MQ==
+> User-Agent: curl/7.50.3
+> Accept: */*
+>
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+HTTP/1.0 200 OK
+< Server: SonicWALL
+Server: SonicWALL
+< Expires: -1
+Expires: -1
+< Cache-Control: no-cache
+Cache-Control: no-cache
+< Content-type: application/json; charset=UTF-8
+Content-type: application/json; charset=UTF-8
+< X-Content-Type-Options: nosniff
+X-Content-Type-Options: nosniff
+
+<
+{
+    "status": {
+        "success": true,
+
+        "info": [
+            { "level": "info", "code": "E_OK", "message": "Success." }
+        ]
+    }
+ }
+* Curl_http_done: called premature == 0
+* Closing connection 0
+* TLSv1.2 (OUT), TLS alert, Client hello (1):
+++ URL2=api/sonicos/reporting/ssl-vpn/sessions
+++ URL2=api/sonicos/address-objects/ipv4
+++ URL2=api/sonicos/address-groups/ipv4/name/my_AUTO_Blacklist
+++ URL2='api/sonicos/address-objects/ipv4/name/AUTO_type1_00001_added=2020/05/21_14:20:48;Description=GoogleDNSServer;expires=1000'
+++ URL2=api/sonicos/address-objects/ipv4/name/AUTO_simple
+++ curl --proxy 127.0.0.1:8888 --verbose -k -i -X GET https://192.168.71.3:443/api/sonicos/address-objects/ipv4/name/AUTO_simple -H 'accept: application/json'
+Note: Unnecessary use of -X or --request, GET is already inferred.
+*   Trying 127.0.0.1...
+* TCP_NODELAY set
+* Connected to 127.0.0.1 (127.0.0.1) port 8888 (#0)
+* Establish HTTP proxy tunnel to 192.168.71.3:443
+> CONNECT 192.168.71.3:443 HTTP/1.1
+> Host: 192.168.71.3:443
+> User-Agent: curl/7.50.3
+> Proxy-Connection: Keep-Alive
+>
+< HTTP/1.1 200 Connection Established
+HTTP/1.1 200 Connection Established
+< FiddlerGateway: Direct
+FiddlerGateway: Direct
+< StartTime: 18:52:13.343
+StartTime: 18:52:13.343
+< Connection: close
+Connection: close
+<
+
+* Proxy replied OK to CONNECT request
+* Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+* error setting certificate verify locations, continuing anyway:
+*   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES256-GCM-SHA384
+* Server certificate:
+*  subject: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=192.168.71.3
+*  start date: May 22 16:35:34 2019 GMT
+*  expire date: Aug 20 16:35:34 2022 GMT
+*  issuer: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=DO_NOT_TRUST_FiddlerRoot
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+> GET /api/sonicos/address-objects/ipv4/name/AUTO_simple HTTP/1.1
+> Host: 192.168.71.3
+> User-Agent: curl/7.50.3
+> accept: application/json
+>
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+HTTP/1.0 200 OK
+< Server: SonicWALL
+Server: SonicWALL
+< Expires: -1
+Expires: -1
+< Cache-Control: no-cache
+Cache-Control: no-cache
+< Content-type: application/json; charset=UTF-8
+Content-type: application/json; charset=UTF-8
+< X-Content-Type-Options: nosniff
+X-Content-Type-Options: nosniff
+
+<
+{
+     "address_object": {
+         "ipv4": {
+             "name": "AUTO_simple"
+            ,"uuid": "00000000-0000-0003-0100-18b1699ddacc"
+            ,"zone": "WAN"
+
+            ,"host": {
+                 "ip": "8.8.8.7"
+             }
+         }
+     }
+}
+* Curl_http_done: called premature == 0
+* Closing connection 0
+* TLSv1.2 (OUT), TLS alert, Client hello (1):
+++ curl --proxy 127.0.0.1:8888 --verbose -k -i -X DELETE https://192.168.71.3:443/api/sonicos/auth
+*   Trying 127.0.0.1...
+* TCP_NODELAY set
+* Connected to 127.0.0.1 (127.0.0.1) port 8888 (#0)
+* Establish HTTP proxy tunnel to 192.168.71.3:443
+> CONNECT 192.168.71.3:443 HTTP/1.1
+> Host: 192.168.71.3:443
+> User-Agent: curl/7.50.3
+> Proxy-Connection: Keep-Alive
+>
+< HTTP/1.1 200 Connection Established
+HTTP/1.1 200 Connection Established
+< FiddlerGateway: Direct
+FiddlerGateway: Direct
+< StartTime: 18:52:13.655
+StartTime: 18:52:13.655
+< Connection: close
+Connection: close
+<
+
+* Proxy replied OK to CONNECT request
+* Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+* error setting certificate verify locations, continuing anyway:
+*   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES256-GCM-SHA384
+* Server certificate:
+*  subject: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=192.168.71.3
+*  start date: May 22 16:35:34 2019 GMT
+*  expire date: Aug 20 16:35:34 2022 GMT
+*  issuer: OU=Created by http://www.fiddler2.com; O=DO_NOT_TRUST; CN=DO_NOT_TRUST_FiddlerRoot
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+> DELETE /api/sonicos/auth HTTP/1.1
+> Host: 192.168.71.3
+> User-Agent: curl/7.50.3
+> Accept: */*
+>
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+HTTP/1.0 200 OK
+< Server: SonicWALL
+Server: SonicWALL
+< Expires: -1
+Expires: -1
+< Cache-Control: no-cache
+Cache-Control: no-cache
+< Content-type: application/json; charset=UTF-8
+Content-type: application/json; charset=UTF-8
+< X-Content-Type-Options: nosniff
+X-Content-Type-Options: nosniff
+
+<
+{
+    "status": {
+        "success": true,
+
+        "info": [
+            { "level": "info", "code": "E_OK", "message": "Success." }
+        ]
+    }
+ }
+* Curl_http_done: called premature == 0
+* Closing connection 0
+* TLSv1.2 (OUT), TLS alert, Client hello (1):
+
+[2020-05-23 18:52.13]  /drives/c/Users/Caleb/Google Drive/sonicWallAPi
+[Caleb.DESKTOP-ROPLVSM] ➤
