@@ -22,10 +22,26 @@ class AuthType(Enum):
 	DIGEST = 1
 
 class AddressObject:
-	def __init__(self, myDict):
-		self.name = myDict["address_object"]["ipv4"]["name"]
-		self.zone = myDict["address_object"]["ipv4"]["zone"]
-		self.ip = myDict["address_object"]["ipv4"]["host"]["ip"]
+	def __init__(self, ip, hiddenName="", zone="WAN", eventCreated="", eventSource="pySonicOSAPI", sourceZone="", destinationZone="", country="", descr="", messageID: int=-1, numOccur: int=1):
+		from datetime import datetime
+		self.name = hiddenName
+		self.prefixName="AUTO_type1_" #All object names will begin with this
+		self.zone = zone
+		self.ip = ip
+		self.country=country
+		self.descr=descr
+		self.eventCreated=eventCreated #Date of event (may be different from created date)
+		self.created=datetime.now()	#this is date Addr Object was created
+		self.updated="" #this is date the AddrObject was last updated
+		self.numOccur=numOccur #this is number of times the AddrObject was modified (to count # of times this IP has hit the firewall)
+		self.eventSource=eventSource  #this is usually the IP Address of the device that generated the Event
+		self.messageID=messageID	#this is the eventID from the device (1198=Geo IP Blocked)
+		self.destinationZone=destinationZone  #For GeoIP Blocked, this would be, for example, LAN
+		self.sourceZone=sourceZone  #For GeoIP Blocked, this would be WAN - (we would not want to block LAN SourceZones)
+
+	
+	def getName(self):
+		return f"{self.prefixName};eventCreated={self.eventCreated}Country={self.country};sourceZone={self.sourceZone};destZone={self.destinationZone}"
 
 	def __str__(self):
 		str = ("name: " + self.name) + "\n" + \
@@ -53,16 +69,43 @@ class AddressObject:
 			},
 		}
 		return json.dumps(rvalue)
-		
+
 class AddressObjectWithParams(AddressObject):
 	def __init__(self, name: str, ip: str, zone: str="WAN"):
-		self.name = name
-		self.ip = ip
-		self.zone = "WAN" if zone == "" else zone
+		super().__init__(ip, hiddenName=name, zone=zone)
 
 class AddressObjectWithDict(AddressObject):
-	def __init(self, myDict: dict):
-		super().__init__(myDict)
+	def __init__(self, myDict: dict):
+		super().__init__(myDict["address_object"]["ipv4"]["host"]["ip"], name = myDict["address_object"]["ipv4"]["name"], zone = myDict["address_object"]["ipv4"]["zone"])
+
+
+class AddressObjectWithDetails(AddressObject):
+	def __init__(self, eventCreated, eventSource, sourceZone, destinationZone, country, ip, descr, messageID: int=-1, numOccur: int=1):
+		super().__init__(ip, eventCreated=eventCreated, eventSource=eventSource, sourceZone=sourceZone, destinationZone=destinationZone, country=country, descr=descr, messageID = messageID, numOccur=numOccur)
+
+class AddressObjectWithFullName(AddressObject):
+	def __init__(self, name):
+		arr = name.split(";")
+		myDict = {}
+		for keyValue in arr:
+			myDict[keyValue.split("=")[0]]=keyValue.split("=")[1]
+		super().__init__(myDict["ip"],  zone=myDict["zone"], eventCreated=myDict["eventCreated"], sourceZone=myDict["sourceZone"], destinationZone=myDict["destinationZone"], country=myDict["country"], descr=myDict["descr"], messageID=myDict["messageID"], numOccur=myDict["numOccur"])
+
+class AddressGroup:
+	def __init__(self):
+		self.group = {}
+	
+	def __str__(self):
+		rvalue = str(self.group)
+		return rvalue		
+	
+	def get(self, idx):
+		for index, key in enumerate(self.group.keys()):
+			if index == idx:
+				return self.group[key]
+
+	def addAddressObject(self, addressObject: AddressObject):
+		self.group[addressObject.name] = addressObject #.getJson()["address_object"]
 
 class SonicWall:	
 	def __init__(self, host):
@@ -249,10 +292,11 @@ class SonicWall:
 		return req
 
 	def getIPv4AddressObjectByName(self, name: str) -> AddressObject:
+		from urllib.parse import quote
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		proxy = {"host" : "127.0.0.1", "port" : 8888}
 		headers = {}
-		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/name/" + name
+		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/name/" + quote(name)
 		req = self.request(web, proxy=proxy, headers=headers, method="get")
 		self.log("Get address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
 		if self.headers["status"]["code"]=="200":
@@ -334,3 +378,14 @@ class SonicWall:
 		req = self.request(web, "delete", headers={"Content-type":"application/json"})
 		self.checkStatus("Delete address object " + addrName + " ", web, req, sys._getframe().f_code.co_name)
 		return True
+
+	def getIPv4AddressGroupByName(self, groupName: str) -> AddressGroup:
+		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
+		web = "https://" + self.host + "/api/sonicos/address-groups/ipv4/name/" + groupName
+		req = self.request(web, method="get")
+		group = AddressGroup()
+		for addrObj in self.dict_response["address_group"]["ipv4"]["address_object"]["ipv4"]:
+			addrObj2 = self.getIPv4AddressObjectByName(addrObj["name"])
+			group.addAddressObject(addrObj2)
+		self.checkStatus("getting address group", web, req, sys._getframe().f_code.co_name)
+		return group

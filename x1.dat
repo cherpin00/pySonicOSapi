@@ -1,1 +1,1 @@
-{"address_object": {"ipv4": {"name": "test_update1", "zone": "WAN", "host": {"ip": "1.1.1.1"}}}}
+{"address_object": {"ipv4": {"name": "test_create1_David Herpin", "zone": "WAN", "host": {"ip": "2.1.1.1"}}}}
