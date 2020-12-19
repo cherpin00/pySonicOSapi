@@ -2,110 +2,15 @@
 # Refer to here for LogLevels....
 # https://support.solarwinds.com/SuccessCenter/s/article/Syslog-Severity-levels
 
+from functions import *
 import sys
 from enum import Enum
-class LogLevel(Enum):
-	EMERGENCY = 0
-	ALERT = 1
-	CRITICAL = 2
-	ERROR = 3
-	WARNING = 4
-	NOTICE = 5
-	INFO = 6
-	DEBUG = 7
-	VERBOSE = 8
-	def __ge__(self, other):
-		return self.value >= other.value
+from logger import *
+from AddressObject import *
 
 class AuthType(Enum):
 	BASIC = 0
 	DIGEST = 1
-
-class AddressObject:
-	def __init__(self, ip, hiddenName="", zone="WAN", eventCreated="", eventSource="pySonicOSAPI", sourceZone="", destinationZone="", country="", descr="", messageID: int=-1, numOccur: int=1):
-		from datetime import datetime
-		self.name = hiddenName
-		self.prefixName="AUTO_type1_" #All object names will begin with this
-		self.zone = zone
-		self.ip = ip
-		self.country=country
-		self.descr=descr
-		self.eventCreated=eventCreated #Date of event (may be different from created date)
-		self.created=datetime.now()	#this is date Addr Object was created
-		self.updated="" #this is date the AddrObject was last updated
-		self.numOccur=numOccur #this is number of times the AddrObject was modified (to count # of times this IP has hit the firewall)
-		self.eventSource=eventSource  #this is usually the IP Address of the device that generated the Event
-		self.messageID=messageID	#this is the eventID from the device (1198=Geo IP Blocked)
-		self.destinationZone=destinationZone  #For GeoIP Blocked, this would be, for example, LAN
-		self.sourceZone=sourceZone  #For GeoIP Blocked, this would be WAN - (we would not want to block LAN SourceZones)
-
-	
-	def getName(self):
-		return f"{self.prefixName};eventCreated={self.eventCreated}Country={self.country};sourceZone={self.sourceZone};destZone={self.destinationZone}"
-
-	def __str__(self):
-		str = ("name: " + self.name) + "\n" + \
-		("zone: " + self.zone) + "\n" + \
-		("ip: " + self.ip) + "\n"
-		return str
-	
-	def __lt__(self, other):
-		return self.name < other.name
-
-	def __eq__(self, other):
-		return self.getJson() == other.getJson()
-
-	def getJson(self):
-		import json
-		rvalue = {
-			"address_object" : {
-				"ipv4" : {
-					"name" : self.name,
-					"zone" : self.zone,
-					"host" : {
-						"ip" : self.ip,
-					},
-				},
-			},
-		}
-		return json.dumps(rvalue)
-
-class AddressObjectWithParams(AddressObject):
-	def __init__(self, name: str, ip: str, zone: str="WAN"):
-		super().__init__(ip, hiddenName=name, zone=zone)
-
-class AddressObjectWithDict(AddressObject):
-	def __init__(self, myDict: dict):
-		super().__init__(myDict["address_object"]["ipv4"]["host"]["ip"], name = myDict["address_object"]["ipv4"]["name"], zone = myDict["address_object"]["ipv4"]["zone"])
-
-
-class AddressObjectWithDetails(AddressObject):
-	def __init__(self, eventCreated, eventSource, sourceZone, destinationZone, country, ip, descr, messageID: int=-1, numOccur: int=1):
-		super().__init__(ip, eventCreated=eventCreated, eventSource=eventSource, sourceZone=sourceZone, destinationZone=destinationZone, country=country, descr=descr, messageID = messageID, numOccur=numOccur)
-
-class AddressObjectWithFullName(AddressObject):
-	def __init__(self, name):
-		arr = name.split(";")
-		myDict = {}
-		for keyValue in arr:
-			myDict[keyValue.split("=")[0]]=keyValue.split("=")[1]
-		super().__init__(myDict["ip"],  zone=myDict["zone"], eventCreated=myDict["eventCreated"], sourceZone=myDict["sourceZone"], destinationZone=myDict["destinationZone"], country=myDict["country"], descr=myDict["descr"], messageID=myDict["messageID"], numOccur=myDict["numOccur"])
-
-class AddressGroup:
-	def __init__(self):
-		self.group = {}
-	
-	def __str__(self):
-		rvalue = str(self.group)
-		return rvalue		
-	
-	def get(self, idx):
-		for index, key in enumerate(self.group.keys()):
-			if index == idx:
-				return self.group[key]
-
-	def addAddressObject(self, addressObject: AddressObject):
-		self.group[addressObject.name] = addressObject #.getJson()["address_object"]
 
 class SonicWall:	
 	def __init__(self, host):
@@ -119,16 +24,26 @@ class SonicWall:
 		self.proxy_enable=False
 		self.always_params= ""
 		self.text_response = ""
+		self.last_curl_command = ""
 
-	def log(self, *args, msgLogLevel=LogLevel.INFO):
-		from datetime import datetime
-		if self.log_level >= msgLogLevel:
-			myStr = ""
-			for a in args:
-				myStr += ", " + str(a)
-			print(datetime.now(), msgLogLevel.name, msgLogLevel.value, myStr)
+	@staticmethod
+	def connectToSonicwall(ip="192.168.71.3"):	#Todo:How to make this function return SonicWall? -> SonicWall does not work
+		#Todo:We should accept the name of a CONFIG file that includes an encrypted SW Password and other configuration settings.
+		sw = SonicWall("192.168.71.3")
+		sw.always_params = "--connect-timeout 5 --insecure --include"
+		sw.log_level=LogLevel.DEBUG
+		sw.proxy_enable=True
+		sw.proxy_host="127.0.0.1"
+		sw.proxy_port=8888
+		sw.logout(throwErrorOnFailure=False)
+		sw.login("admin", "p", authType=AuthType.BASIC, throwErrorOnFailure=True)
+		return sw
+
+	def log(self, msg, *args, msgLogLevel=LogLevel.INFO):
+		Logger.log(msg, args, msgLogLevel=msgLogLevel)
 
 	def header_function(self, header_line):
+		import traceback
 		self.log("Starting " + sys._getframe().f_code.co_name + ":", header_line.decode(), msgLogLevel=LogLevel.VERBOSE)
 		# HTTP standard specifies that headers are encoded in iso-8859-1.
 		# On Python 2, decoding step can be skipped.
@@ -148,7 +63,7 @@ class SonicWall:
 					self.headers["status"]["msg"] = temp[2] .strip()
 			except:
 				self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-				raise RuntimeError("Getting status from response header")
+				raise RuntimeError(f"Getting status from response header. header_line:{header_line}.")
 			return
 			
 
@@ -172,6 +87,14 @@ class SonicWall:
 	
 	def request(self, web, method="post", **kargs):
 		import subprocess
+		#Todo:Refactor this.  There must be a better way to specify default values, etc.
+		if "throwErrorOnFailure" in kargs.keys():
+			throwErrorOnFailure=kargs["throwErrorOnFailure"]
+			del kargs["throwErrorOnFailure"]
+		else:
+			throwErrorOnFailure=True
+		#The idea behind throwErrorOnFailure=False is that the REQ doesn't have to be successful for the program to continue.
+		#For example, for LOGOFF, this is failing sometimes, if called when noone is logged in.		
 
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		self.log("Host:", self.host, msgLogLevel=LogLevel.DEBUG)
@@ -180,10 +103,10 @@ class SonicWall:
 		
 		# set proxy
 		if self.proxy_enable:
-			self.log("Proxy is enabled:", self.proxy_host, self.proxy_port, msgLogLevel=LogLevel.NOTICE)
+			self.log("Proxy is enabled:", self.proxy_host, self.proxy_port, msgLogLevel=LogLevel.DEBUG)
 			curlCommand += " --proxy " + self.proxy_host + ":" + str(self.proxy_port)  + " "
 		else:
-			self.log("Proxy is DISABLED.", msgLogLevel=LogLevel.NOTICE)
+			self.log("Proxy is DISABLED.", msgLogLevel=LogLevel.INFO)
 		
 		extraCommands = ""
 		if "params" in kargs.keys():
@@ -199,19 +122,25 @@ class SonicWall:
 				curlCommand += " --header " + '"' + key + ": " + str(kargs['headers'][key]).strip() + '" '
 
 		curlCommand += " -X " + method.upper() + " " + web
-		self.log("Running", curlCommand)
+
+		import json
+		kargs_str=json.dumps(kargs, indent=1)
+		self.log(f"Detailed Request Info, Method:{method} to Address:{web}\nkargs:\n{kargs_str}\n----------", msgLogLevel=LogLevel.DEBUG)
+
+		self.log("Running CURL:", curlCommand, msgLogLevel=LogLevel.INFO)
+		self.last_curl_command=curlCommand
 		process = subprocess.Popen(curlCommand,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE)
-		self.text_response = process.stdout.read()
+		self.text_response = process.stdout.read().decode()
 		self.text_error = process.stderr.read().decode()
-		self.log("x1:", self.text_error, msgLogLevel=LogLevel.VERBOSE)
 		with open("stderr.out", "w") as f:
 			f.write(self.text_error)
 		with open("sonicWall.out", "w") as f:
-			f.write(self.text_response.decode())
+			f.write(self.text_response)
 		self.json_response = ""
-		bodies = self.text_response.decode().split("\r\n\r\n")
+		bodies = self.text_response.split("\r\n\r\n")
+		self.log(f"Detailed Response Info from Request, Method:{method} to Address:{web}\n-----text_reponse:-----\n{self.text_response}\n-----END OF text_response-----\n-----text_error:-----\n{self.text_error}\n-----END OF text_error-----", msgLogLevel=LogLevel.DEBUG)
 		for headNumber, head in enumerate(bodies):
 			isHeader = False
 			isJson = False
@@ -227,12 +156,26 @@ class SonicWall:
 				elif isJson:
 					self.json_response += line
 		import json
-		self.dict_response = json.loads(self.json_response)
+		#Todo: Need to catch errors here.  If the response doesn't have valid json the prog will crash and it won't be apparent why.
+		self.log(f"json Response from parsing text_response:\n{json.dumps(self.json_response, indent=1)}", msgLogLevel=LogLevel.DEBUG)
+		try:
+			if not self.json_response=="":
+				self.dict_response = json.loads(self.json_response)
+			else:
+				self.dict_response = "{}"
+		except:
+			jsresponse=self.json_response
+			if jsresponse=="":
+				jsresponse="---BLANK---"
+			exceptionWithTraceback(msg=f"Error loading JSON response from server. json_response is:\n{jsresponse}", blnThrowError=throwErrorOnFailure)
 		if self.headers["status"] == {}:
-			raise RuntimeError("Getting status.  Did not find status in Response Headers.")
-
+			if throwErrorOnFailure:
+				raise RuntimeError("Getting status.  Did not find status in Response Headers.")
+			else:
+				self.log(f"Error getting status on Sonicwall Logout.  Was there a user logged in?", msgLogLevel=LogLevel.ERROR)
 		self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-		return self.text_response.decode()
+		r=self.text_response
+		return r
 
 	def login(self, username, password, authType = AuthType.DIGEST, throwErrorOnFailure=True):
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
@@ -244,25 +187,22 @@ class SonicWall:
 		}
 		web = "https://" + self.host + "/api/sonicos/auth"
 		if authType.value != AuthType.BASIC.value:
+			#Todo:Need to implement DIGEST AuthType.
 			raise RuntimeError(f"Auth type {authType.name} not supported.")
 		else:
 			self.log(f"Auth type {authType.name} is lowest security level.  Consider a higher Level Auth Type like Digest.", msgLogLevel=LogLevel.WARNING)
 			req=self.request(web, username=username, password=password, headers = header)
 		self.log("Login status", self.headers["status"], msgLogLevel=LogLevel.INFO)
-		if self.headers["status"]["code"]=="200":
-			self.log("Login successful", msgLogLevel=LogLevel.NOTICE)
+		if self.checkStatus("Login to Sonicwall", web, req, throwErrorOnFailure=throwErrorOnFailure):
+			self.log(f"Login successful for username:{username}", msgLogLevel=LogLevel.INFO)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			return True
 		else:
-			fullstatus=self.headers["status"]["full"]
-			self.log(f"Failed to login.  Status:{fullstatus}", msgLogLevel=LogLevel.NOTICE)
+			self.log(f"Failed to login. username:{username}", msgLogLevel=LogLevel.INFO)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-			if throwErrorOnFailure:
-				raise RuntimeError(f"Failed to login to host, {web}, status:{fullstatus}")
-			else:
-				return False
+			return False
 
-	def logout(self, throwErrorOnFailure=True):
+	def logout(self, throwErrorOnFailure=False):
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		self.log(f"Logging out of {self.host}...", msgLogLevel=LogLevel.NOTICE)
 
@@ -275,21 +215,17 @@ class SonicWall:
 			# "User-Agent" : "curl/7.50.3"
 		}
 		web = "https://" + self.host + "/api/sonicos/auth"
-		req = self.request(web, proxy=proxy, headers = headers, method="delete", timeout=5)
+		req = self.request(web, proxy=proxy, headers = headers, method="delete", timeout=5, throwErrorOnFailure=False)
 		self.log("Logout status", self.headers["status"], msgLogLevel=LogLevel.INFO)
-		if self.headers["status"]["code"]=="200":
-			self.log("Logout successful", msgLogLevel=LogLevel.NOTICE)
+		if self.checkStatus("Logout of Sonicwall", web, req, throwErrorOnFailure=throwErrorOnFailure):
+			self.log("Logout successful", msgLogLevel=LogLevel.INFO)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			return True
 		else:
 			fullstatus=self.headers["status"]["full"]
-			self.log(f"Failed to logout.  Status:{fullstatus}")
+			self.log(f"Failed to logout. Status:{fullstatus}", msgLogLevel=LogLevel.INFO)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-			if throwErrorOnFailure:
-				raise RuntimeError(f"Failed to logout of host, {web}, status:{fullstatus}")
-			else:
-				return False
-		return req
+			return False
 
 	def getIPv4AddressObjectByName(self, name: str) -> AddressObject:
 		from urllib.parse import quote
@@ -299,57 +235,57 @@ class SonicWall:
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/name/" + quote(name)
 		req = self.request(web, proxy=proxy, headers=headers, method="get")
 		self.log("Get address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
-		if self.headers["status"]["code"]=="200":
-			self.log("Get address object successful", msgLogLevel=LogLevel.NOTICE)
-			self.log("Response", req, msgLogLevel=LogLevel.ALERT)
+		if self.checkStatus("Get address object", web, req, throwErrorOnFailure=True):
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-			self.text_response
-			return AddressObjectWithDict(self.dict_response)
+			# self.text_response
+			#Todo: Need to validate the dict_response.  It should have Zone, IP, Name and be structured correctly.
+			addr=AddressObjectWithDict(self.dict_response)
+			return addr
 		else:
-			fullstatus=self.headers["status"]["full"]
-			self.log(f"Failed to get address object.  Status:{fullstatus}")
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-			raise RuntimeError(f"Failed to get address object from, {web}, status:{fullstatus}")
+			raise RuntimeError(f"Failed to get address object from, {web}.")
 
-	def createIPv4AddressObject(self, addressObject: AddressObject, throwErrorOnFailure=True):
+	def createIPv4AddressObject(self, addressObject: AddressObject, useHiddenName:bool = True, throwErrorOnFailure=True):
 		import shlex
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4"
 		# req = self.request(web, method="get", params="--data-ascii " + '"' + (str(addressObject.getJson())).replace('"', '^"') + '"', headers= {"Content-type" : "application/json"})
 		filename="x1.dat"
 		with open(filename, "w") as f:
-			f.write(str(addressObject.getJson()))
+			f.write(str(addressObject.getJson(getHiddenName=useHiddenName)))
 		req = self.request(web, method="post", params=' -d "@' + filename + '" ', headers= {"Content-type" : "application/json"})
 
 		self.log("Create address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
-		if self.headers["status"]["code"]=="200":
-			self.log("Create address object successful", msgLogLevel=LogLevel.NOTICE)
-			self.log("Response", req, msgLogLevel=LogLevel.ALERT)
+		if self.checkStatus("Create Address Object", web, req, throwErrorOnFailure=throwErrorOnFailure):
+			self.log(f"New Address Object created. Name:{addressObject.getName()}", msgLogLevel=LogLevel.NOTICE)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			return True
 		else:
 			#Todo: Need to get JSON response when the create fails. For example: status, info, message: "Already exists."
 			fullstatus=self.headers["status"]["full"]
-			self.log(f"Failed to create address object.  Status:{fullstatus}")
+			print(f"Failed to create address object.  Text Response:{self.dict_response}")
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			if throwErrorOnFailure:
 				raise RuntimeError(f"Failed to create address object from, {web}, status:{fullstatus}")
 			else:
 				return False
 	
-
 	def checkStatus(self, msg, web, req, functionName="unknown", throwErrorOnFailure=True):
-		self.log(msg + " status", self.headers["status"], msgLogLevel=LogLevel.INFO)
+		#Todo:functionName is not necessary here.  Refactor.
+		#Todo:This function should be in a TRY: and should report enough info in the exception to troubleshoot.
+		self.log(f"Checking API request status, '{msg}'", msgLogLevel=LogLevel.INFO)
+		self.log(f"Response 'status' Headers:", self.headers["status"], msgLogLevel=LogLevel.DEBUG)
+		self.log("Full HTTP Response from Request:", req, msgLogLevel=LogLevel.VERBOSE)
+		statusCode=self.headers["status"]["code"]
+		statusFull=self.headers["status"]["full"]
 		if self.headers["status"]["code"]=="200":
-			self.log(msg + " successful", msgLogLevel=LogLevel.NOTICE)
-			self.log("Response", req, msgLogLevel=LogLevel.ALERT)
+			self.log(f"'{msg}' successful.  Status:{statusCode}/{statusFull}", msgLogLevel=LogLevel.INFO)
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			return True
 		else:
-			fullstatus=self.headers["status"]["full"]
-			self.log(f"Failed to {msg}.  Status:{fullstatus}")
+			self.log(f"'{msg}' failed.  Status:{statusCode}/{statusFull}", msgLogLevel=LogLevel.NOTICE)
 			self.log("Exiting function:" + functionName, msgLogLevel=LogLevel.VERBOSE)
 			if throwErrorOnFailure:
-				raise RuntimeError(f"Failed to {msg} from, {web}, status:{fullstatus}")
+				raise RuntimeError(f"Failed to get API request status, '{msg}' from:\nWeb:{web}\nStatus:{statusCode}/{statusFull}\nCurl:{self.last_curl_command}")
 			else:
 				return False
 
@@ -363,29 +299,74 @@ class SonicWall:
 		req = self.request(web, "get")
 		self.checkStatus("Get pending changes", web, req, sys._getframe().f_code.co_name)
 
-	def modifyAddressObject(self, addressObject, throwErrorOnFailure=True):
-		web = "https://" + self.host +  f"/api/sonicos/address-objects/ipv4/name/{addressObject.name}"
+	def modifyAddressObject(self, addressObject, updateWithHiddenName:bool = True, throwErrorOnFailure=True):
+		from urllib.parse import quote
+		from datetime import datetime
+		existing_addrName=addressObject.hiddenName
+		existing_addrName_encoded=quote(existing_addrName)
+		addressObject.numOccur+=1
+		oldUpdated=addressObject.updated
+		addressObject.updated=datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+		# if updateWithHiddenName:
+		# 	nm=addressObject.hiddenName
+		# else:
+		# 	nm=addressObject.getName()
+		self.log(f"Updating address object named, {existing_addrName}.\nIncreased numOccur to {addressObject.numOccur}\nChanged updated from {oldUpdated} to {addressObject.updated}.", msgLogLevel=LogLevel.NOTICE)
+
+		web = "https://" + self.host +  f"/api/sonicos/address-objects/ipv4/name/{existing_addrName_encoded}"
 		filename = "addressObject.dat"
 		with open(filename, "w") as f:
-			f.write(str(addressObject.getJson()))
+			f.write(str(addressObject.getJson(updateWithHiddenName)))
 		req = self.request(web, "put", params=' --data "@' + filename + '" ', headers={"Content-type":"application/json"})
-		return self.checkStatus("Modyify address object " + addressObject.name + " ", web, req, sys._getframe().f_code.co_name, throwErrorOnFailure=throwErrorOnFailure)
+		return self.checkStatus("Modifying address object " + existing_addrName + " ", web, req, sys._getframe().f_code.co_name, throwErrorOnFailure=throwErrorOnFailure)
 
 	def deleteAddressObject(self, addrName: str, succeedIfNotExist=False):
+		from urllib.parse import quote
 		if succeedIfNotExist:
 			raise RuntimeError("succeedIfNotExists option not yet supported in function:" + sys._getframe().f_code.co_name)
-		web = "https://" + self.host +  f"/api/sonicos/address-objects/ipv4/name/{addrName}"
+		addrName_encoded=quote(addrName)
+		web = "https://" + self.host +  f"/api/sonicos/address-objects/ipv4/name/{addrName_encoded}"
 		req = self.request(web, "delete", headers={"Content-type":"application/json"})
-		self.checkStatus("Delete address object " + addrName + " ", web, req, sys._getframe().f_code.co_name)
-		return True
+		if self.checkStatus("Delete address object " + addrName + " ", web, req, sys._getframe().f_code.co_name):
+			self.log(msg=f"Deleted address object, {addrName}.", msgLogLevel=LogLevel.NOTICE)
+			return True
+		else:
+			self.log(f"Unable to delete address object with name:{addrName}\Response from HTTP Request:{req}", msgLogLevel=LogLevel.ERROR)
+			raise RuntimeError(f"Unable to delete address object with name:{addrName}")
 
 	def getIPv4AddressGroupByName(self, groupName: str) -> AddressGroup:
+		import json
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		web = "https://" + self.host + "/api/sonicos/address-groups/ipv4/name/" + groupName
 		req = self.request(web, method="get")
-		group = AddressGroup()
+		group = AddressGroup(orig_json=json.dumps(self.dict_response))
 		for addrObj in self.dict_response["address_group"]["ipv4"]["address_object"]["ipv4"]:
 			addrObj2 = self.getIPv4AddressObjectByName(addrObj["name"])
 			group.addAddressObject(addrObj2)
 		self.checkStatus("getting address group", web, req, sys._getframe().f_code.co_name)
 		return group
+
+	def addAddressOnjectToIPv4AddressGroupWithJson(self, groupName: str, addressObjectName: str, json:str) -> bool:
+		from urllib.parse import quote
+		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
+		try:
+			groupName_encoded=quote(groupName)
+			web = "https://" + self.host + "/api/sonicos/address-groups/ipv4/name/" + groupName_encoded
+			filename = "addressObject.dat"
+			with open(filename, "w") as f:
+				f.write(str(json))
+			req = self.request(web, "put", params=' --data "@' + filename + '" ', headers={"Content-type":"application/json"})
+			return self.checkStatus(f"Adding address object, {addressObjectName}, to Address Group, {groupName}", web, req, sys._getframe().f_code.co_name)
+		except:
+			exceptionWithTraceback(f"Adding Sonicwall Address Object, {addressObjectName}, to Address Group, {groupName}.", blnThrowError=False)
+			return False
+
+	def deleteOldestAddressObjectByLastUpdated(self, addrgrp: AddressGroup, maxGroupSize: int=100):
+		#Todo: Currently only deletes one object at a time, if necessary.
+		if len(addrgrp.group)>=maxGroupSize:
+			Logger.log(f"Max Group Size, {maxGroupSize}, has been reached.  Current Size is, {len(addrgrp.group)}.  Looking for Addr Object to delete.", msgLogLevel=LogLevel.NOTICE)
+			oldestAddr=addrgrp.findOldestAddrByLastUpdated()
+			oldestAddrName=oldestAddr.getName()
+			self.deleteAddressObject(oldestAddrName, succeedIfNotExist=False)
+		else:
+			Logger.log(f"Max Group Size, {maxGroupSize}, has not been reached.  Current Size is, {len(addrgrp.group)}.", msgLogLevel=LogLevel.NOTICE)

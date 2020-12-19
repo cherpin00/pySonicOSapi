@@ -6,57 +6,100 @@ def test_getCaleb():
     sw.getIPv4AddressObjectByName("Caleb")
     sw.logout(throwErrorOnFailure=False)
 
+def findAddrByIP(addrgrp:dict, ip, srcZone):
+    for key,value in addrgrp.group.items():
+        if value.getIP()==ip and value.getZone()==srcZone:
+            Logger.log(f"Found IP, {ip}, in Addr: {value.getName()}")
+            return value
+    return None
+def printAddressGroup(addrgrp:dict):
+    i=0
+    print("Showing Address Group Items:")
+    for key,value in addrgrp.group.items():
+        i+=1
+        print(f"Address Object {i}: {value.getName()}, {value.getIP()}, {value.getZone()}")
+        if not value.getName()==value.hiddenName:
+            Logger.log(f"hiddenName and getName() are NOT equal.\nhiddenName:{value.hiddenName}\n getName():{value.getName()}")
+# tests()
 
-def x1(str, quotechar='"'):
-    print(f"keyValueString:{str}")
-    for item in next(csv.reader([str], delimiter=";", quotechar=quotechar, quoting=csv.QUOTE_ALL)):
-        print("Item", item)
-        for item2 in next(csv.reader([item], delimiter="=", quotechar=quotechar)):
-            print("Item2", item2)
+def createAddressObjectFromEventLogText(logEvent:str) -> AddressObject:
+    logDict=keyValueStringToDict3(logEvent, fieldSep=" ", keyValueSep="=",quotedIdentifier='"')
+    # for key in logDict:
+    #     print(key, '=', logDict[key])
+    if "m" not in logDict.keys():
+        print("Can't create address object.  No sonic wall message(m) found.")
+        raise RuntimeError("Can't create address object.  No sonic wall message(m) found.  msg=" + logEvent)
+        return
 
-    print("--------------")
+    if logDict["m"] == "1198":
+        messageID = logDict["m"]
+        numOccur = 1
+        eventCreated=logDict["time"]
+        eventSource=logDict["fw"]
+        sourceZone=logDict["srcZone"]
+        destinationZone=logDict["dstZone"]
+        country=logDict["msg"].split("Country Name:")[1]
+        ip=logDict["src"].split(":")[0]
+        descr=""
+        # eventCreated, eventSource, sourceZone, destinationZone, country, ip, descr, messageID: int=-1, numOccur: int=1):
+        # , eventSource, sourceZone, destinationZone, country, ip, descr, messageID: int=-1, numOccur: int=1
+        a=AddressObjectWithDetails(eventCreated, eventSource, sourceZone, destinationZone, country, ip, descr, messageID, numOccur)
+        return a
+    else:
+        print("Sonic wall message ID not handled," + "m = " + logDict["m"])
+        raise RuntimeError("Sonic wall message ID not handled," + "m = " + logDict["m"]+", msg=" + logEvent)
 
-test_createAddressObject2("")
-exit()
-test_parseLogEvent()
-exit()
-test_keyValueStringToDict()
+def start():
+    print("*"*100)
+    print("*"*100)
+    print("*"*100)
+    print()
+    print()
+    print()
+    print()
 
-test_createAddressObject2("")
+start()
+Logger.LOG_LEVEL=LogLevel.NOTICE
+sw=SonicWall.connectToSonicwall()
 
-exit()
-
-sw = SonicWall("192.168.71.3")
-sw.always_params = "--connect-timeout 5 --insecure --include"
-sw.log_level=LogLevel.DEBUG
-sw.proxy_enable=True
-sw.proxy_host="127.0.0.1"
-sw.proxy_port=8888
-
+sw.logout(throwErrorOnFailure=False)
 sw.login("admin", "p", authType=AuthType.BASIC, throwErrorOnFailure=True)
 
-test_createAddressObject(sw,"David Herpin")
-obj1 = sw.getIPv4AddressGroupByName("my_AUTO_Blacklist").get(0)
-print(obj1.getName())
+addressGroupName="my_AUTO_Blacklist"
+addrgrp = sw.getIPv4AddressGroupByName(addressGroupName)
+ip="100.1.1.23"
+zone="WAN"
+printAddressGroup(addrgrp)
+maxGroupSize=10
+Logger.log(f"# of items in group:{len(addrgrp.group)}. Max Group Size:{maxGroupSize}", msgLogLevel=LogLevel.NOTICE)
+addr=findAddrByIP(addrgrp, ip, zone)
+#Todo: Important.  What if the oldest Addr Object is the one that we are modifying?
+sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize+1) #we call this to make sure we don't have too many objects.  This should only happen if the script previously had failed, if the MAX number has been decreased, or if a user has added objects manually.
+print("===========================")
+if addr is None:
+    Logger.log(f"IP Address, {ip}, and ZONE, {zone} not found.  Creating new address object for {addressGroupName}.")
+    addr=AddressObjectWithParams(name="", ip=ip, zone=zone)
+    if sw.createIPv4AddressObject(addr, useHiddenName=False):
+        sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize)
+        newName=addr.getName()
+        addrgrp.addToGroupOnSonicwall(newName, sw)
 
-exit(1)
-test_deleteUpdateObject(sw)
-test_updateAddressObject(sw)
-sw.logout()
+        #Todo: Still need to add this new address object to the AddressGroup
+        sw.commit() #Todo:Confirm that both new addr and addition to Group can be done on same commit
+        Logger.log(f"Commited new address object and added to Address Group:{addressGroupName}.", msgLogLevel=LogLevel.NOTICE)
+    else:
+        Logger.log(f"Cannot create address object for ip:{ip}, zone:{zone}.", msgLogLevel=LogLevel.ERROR)
+else:
+    #We need to update the addr
+    Logger.log(f"IP Address, {ip}, and ZONE, {zone} were found.  Updating the address object.", msgLogLevel=LogLevel.WARNING)
+    sw.modifyAddressObject(addr, updateWithHiddenName=False)
+    sw.commit()
+
+addrgrp = sw.getIPv4AddressGroupByName("my_AUTO_Blacklist")
+printAddressGroup(addrgrp)
+print("===========================")
+
+
+
 exit()
-
-
-# test_getCaleb()
-# exit()
-sw.login("admin", "password71", authType=AuthType.BASIC, throwErrorOnFailure=False)
-sw.getIPv4AddressObjectByName("Caleb")
-
-# addrObj = AddressObjectWithParams("Caleb", "1.1.1.1")
-# sw.createIPv4AddressObject(addrObj)
-# newAddrObj = AddressObjectWithParams("Caleb", "1.1.1.2")
-# sw.modifyAddressObject(newAddrObj)
-# sw.commit()
-# sw.getPendingChanges()
-
-sw.logout(throwErrorOnFailure=False)    
 

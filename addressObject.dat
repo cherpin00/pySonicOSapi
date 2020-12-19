@@ -1,1 +1,1 @@
-{"address_object": {"ipv4": {"name": "test_update1", "zone": "WAN", "host": {"ip": "1.1.1.2"}}}}
+{"address_group": {"ipv4": {"name": "my_AUTO_Blacklist", "uuid": "00000000-0000-0001-0200-18b1699ddacc", "address_object": {"ipv4": [{"name": "AUTO_type1_;evtCreated=;country=;srcZone=WAN;dstZone=;ip=100.1.1.23;created=2020-06-03_15:15:10;updated=;numOccur=1;eventSource=pySonicOSapi;msgID=-1;descr="}]}}}}
