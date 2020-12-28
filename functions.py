@@ -1,4 +1,7 @@
 from enum import Enum
+
+from logger import Logger
+
 def keyValueStringToDict3(keyValueString: str, fieldSep=";", keyValueSep="=", quotedIdentifier="'"):
     #Adapted from https://stackoverflow.com/questions/79968/split-a-string-by-spaces-preserving-quoted-substrings-in-python
     #Also, there are many more options in the above s.o. q&a.  A Google search for: python parse string quoted
@@ -57,3 +60,12 @@ def getDateTime(s:str, default=None, throwOnError=True, logger=None):
                 logger.log(msg=f"Error parsing string, '{s}' to date.  Using default value, {default}.")
                 r=default
                 return r
+
+def printAddressGroup(addrgrp:dict):
+    i=0
+    print("Showing Address Group Items:")
+    for key,value in addrgrp.group.items():
+        i+=1
+        print(f"Address Object {i}: {value.getName()}, {value.getIP()}, {value.getZone()}")
+        if not value.getName()==value.hiddenName:
+            Logger.log(f"hiddenName and getName() are NOT equal.\nhiddenName:{value.hiddenName}\n getName():{value.getName()}")

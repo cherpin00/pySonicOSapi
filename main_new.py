@@ -58,48 +58,49 @@ def start():
     print()
     print()
 
-start()
-Logger.LOG_LEVEL=LogLevel.NOTICE
-sw=SonicWall.connectToSonicwall()
+if __name__ == "__main__":
+    start()
+    Logger.LOG_LEVEL=LogLevel.NOTICE
+    sw=SonicWall.connectToSonicwall()
 
-sw.logout(throwErrorOnFailure=False)
-sw.login("admin", "p", authType=AuthType.BASIC, throwErrorOnFailure=True)
+    sw.logout(throwErrorOnFailure=False)
+    sw.login("admin", "p", authType=AuthType.BASIC, throwErrorOnFailure=True)
 
-addressGroupName="my_AUTO_Blacklist"
-addrgrp = sw.getIPv4AddressGroupByName(addressGroupName)
-ip="100.1.1.23"
-zone="WAN"
-printAddressGroup(addrgrp)
-maxGroupSize=10
-Logger.log(f"# of items in group:{len(addrgrp.group)}. Max Group Size:{maxGroupSize}", msgLogLevel=LogLevel.NOTICE)
-addr=findAddrByIP(addrgrp, ip, zone)
-#Todo: Important.  What if the oldest Addr Object is the one that we are modifying?
-sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize+1) #we call this to make sure we don't have too many objects.  This should only happen if the script previously had failed, if the MAX number has been decreased, or if a user has added objects manually.
-print("===========================")
-if addr is None:
-    Logger.log(f"IP Address, {ip}, and ZONE, {zone} not found.  Creating new address object for {addressGroupName}.")
-    addr=AddressObjectWithParams(name="", ip=ip, zone=zone)
-    if sw.createIPv4AddressObject(addr, useHiddenName=False):
-        sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize)
-        newName=addr.getName()
-        addrgrp.addToGroupOnSonicwall(newName, sw)
+    addressGroupName="my_AUTO_Blacklist"
+    addrgrp = sw.getIPv4AddressGroupByName(addressGroupName)
+    ip="100.1.1.23"
+    zone="WAN"
+    printAddressGroup(addrgrp)
+    maxGroupSize=10
+    Logger.log(f"# of items in group:{len(addrgrp.group)}. Max Group Size:{maxGroupSize}", msgLogLevel=LogLevel.NOTICE)
+    addr=findAddrByIP(addrgrp, ip, zone)
+    #Todo: Important.  What if the oldest Addr Object is the one that we are modifying?
+    sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize+1) #we call this to make sure we don't have too many objects.  This should only happen if the script previously had failed, if the MAX number has been decreased, or if a user has added objects manually.
+    print("===========================")
+    if addr is None:
+        Logger.log(f"IP Address, {ip}, and ZONE, {zone} not found.  Creating new address object for {addressGroupName}.")
+        addr=AddressObjectWithParams(name="", ip=ip, zone=zone)
+        if sw.createIPv4AddressObject(addr, useHiddenName=False):
+            sw.deleteOldestAddressObjectByLastUpdated(addrgrp, maxGroupSize=maxGroupSize)
+            newName=addr.getName()
+            addrgrp.addToGroupOnSonicwall(newName, sw)
 
-        #Todo: Still need to add this new address object to the AddressGroup
-        sw.commit() #Todo:Confirm that both new addr and addition to Group can be done on same commit
-        Logger.log(f"Commited new address object and added to Address Group:{addressGroupName}.", msgLogLevel=LogLevel.NOTICE)
+            #Todo: Still need to add this new address object to the AddressGroup
+            sw.commit() #Todo:Confirm that both new addr and addition to Group can be done on same commit
+            Logger.log(f"Commited new address object and added to Address Group:{addressGroupName}.", msgLogLevel=LogLevel.NOTICE)
+        else:
+            Logger.log(f"Cannot create address object for ip:{ip}, zone:{zone}.", msgLogLevel=LogLevel.ERROR)
     else:
-        Logger.log(f"Cannot create address object for ip:{ip}, zone:{zone}.", msgLogLevel=LogLevel.ERROR)
-else:
-    #We need to update the addr
-    Logger.log(f"IP Address, {ip}, and ZONE, {zone} were found.  Updating the address object.", msgLogLevel=LogLevel.WARNING)
-    sw.modifyAddressObject(addr, updateWithHiddenName=False)
-    sw.commit()
+        #We need to update the addr
+        Logger.log(f"IP Address, {ip}, and ZONE, {zone} were found.  Updating the address object.", msgLogLevel=LogLevel.WARNING)
+        sw.modifyAddressObject(addr, updateWithHiddenName=False)
+        sw.commit()
 
-addrgrp = sw.getIPv4AddressGroupByName("my_AUTO_Blacklist")
-printAddressGroup(addrgrp)
-print("===========================")
+    addrgrp = sw.getIPv4AddressGroupByName("my_AUTO_Blacklist")
+    printAddressGroup(addrgrp)
+    print("===========================")
 
 
 
-exit()
+    exit()
 

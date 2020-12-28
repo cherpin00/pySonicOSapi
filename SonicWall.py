@@ -13,6 +13,7 @@ class AuthType(Enum):
 	DIGEST = 1
 
 class SonicWall:	
+	required_prefix = "AUTO"
 	def __init__(self, host):
 		self.host = host
 		self.headers = {}
@@ -245,7 +246,35 @@ class SonicWall:
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 			raise RuntimeError(f"Failed to get address object from, {web}.")
 
+	def getArrayIPv4AddressObjects(self):
+		from urllib.parse import quote
+		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
+		proxy = {"host" : "127.0.0.1", "port" : 8888}
+		headers = {}
+		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/"
+		req = self.request(web, proxy=proxy, headers=headers, method="get")
+		self.log("Get address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
+		if self.checkStatus("Get address object", web, req, throwErrorOnFailure=True):
+			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
+			#Todo: Need to validate the dict_response.
+			all_objects = []
+			self.log("Only custom objects are going to returned.")
+			for obj in self.dict_response["address_objects"]: #TODO: confirm that custom objects uuid always start with a '0'
+				if obj["ipv4"]["uuid"][0] != '0':
+					self.log(f"Custom object {obj} found. Skipping.", msgLogLevel=LogLevel.DEBUG)
+					continue
+				addr=AddressObjectWithDict({"address_object" : obj})
+				all_objects.append(addr)
+			return all_objects
+		else:
+			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
+			raise RuntimeError(f"Failed to get address object from, {web}.")
+
 	def createIPv4AddressObject(self, addressObject: AddressObject, useHiddenName:bool = True, throwErrorOnFailure=True):
+		addrName = addressObject.getName()
+		if addrName[:4] != self.prefix:
+			raise RuntimeError(f"Address object {addrName} must start with {self.prefix} to be created")
+
 		import shlex
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4"
 		# req = self.request(web, method="get", params="--data-ascii " + '"' + (str(addressObject.getJson())).replace('"', '^"') + '"', headers= {"Content-type" : "application/json"})
@@ -322,6 +351,8 @@ class SonicWall:
 
 	def deleteAddressObject(self, addrName: str, succeedIfNotExist=False):
 		from urllib.parse import quote
+		if addrName[:4] != self.prefix:
+			raise RuntimeError(f"Address object {addrName} must start with {self.prefix} to be deleted")
 		if succeedIfNotExist:
 			raise RuntimeError("succeedIfNotExists option not yet supported in function:" + sys._getframe().f_code.co_name)
 		addrName_encoded=quote(addrName)

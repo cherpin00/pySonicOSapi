@@ -28,7 +28,7 @@ def _deactivate(args):
 _deactivate(["nondestructive"])
 aliases["deactivate"] = _deactivate
 
-$VIRTUAL_ENV = r"C:\Users\Caleb\GOOGLE~1\SONICW~1\venv"
+$VIRTUAL_ENV = r"C:\Users\caleb\code\code\HITS\pySonicOSapi\venv"
 
 $_OLD_VIRTUAL_PATH = $PATH
 $PATH = $PATH[:]

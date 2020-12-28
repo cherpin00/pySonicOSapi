@@ -30,7 +30,7 @@ class AddressObject:
 		self.destinationZone=destinationZone  #For GeoIP Blocked, this would be, for example, LAN
 		for key in self.__dict__.keys():
 			if "/" in str(self.__dict__[key]):
-				Logger.log(f"TODO: Log this.  There is a slash(/) in the key, {key}.  This is being changed to a dash(-).  New value is, {self.__dict__[key]}", LogLevel.WARNING)
+				Logger.log(f"TODO: Log this.  There is a slash(/) in the key, {key}.  This is being changed to a dash(-).  New value is, {self.__dict__[key]}", msgLogLevel=LogLevel.ALERT)
 				self.__dict__[key]=self.__dict__[key].replace("/", "-")
 	
 	def getLastUpdated(self):
