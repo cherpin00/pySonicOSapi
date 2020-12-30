@@ -272,8 +272,8 @@ class SonicWall:
 
 	def createIPv4AddressObject(self, addressObject: AddressObject, useHiddenName:bool = True, throwErrorOnFailure=True):
 		addrName = addressObject.getName()
-		if addrName[:4] != self.prefix:
-			raise RuntimeError(f"Address object {addrName} must start with {self.prefix} to be created")
+		if addrName[:4] != self.required_prefix:
+			raise RuntimeError(f"Address object {addrName} must start with {self.required_prefix} to be created")
 
 		import shlex
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4"
@@ -351,8 +351,8 @@ class SonicWall:
 
 	def deleteAddressObject(self, addrName: str, succeedIfNotExist=False):
 		from urllib.parse import quote
-		if addrName[:4] != self.prefix:
-			raise RuntimeError(f"Address object {addrName} must start with {self.prefix} to be deleted")
+		if addrName[:4] != self.required_prefix:
+			raise RuntimeError(f"Address object {addrName} must start with {self.required_prefix} to be deleted")
 		if succeedIfNotExist:
 			raise RuntimeError("succeedIfNotExists option not yet supported in function:" + sys._getframe().f_code.co_name)
 		addrName_encoded=quote(addrName)
