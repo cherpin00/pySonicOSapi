@@ -116,6 +116,14 @@ class SonicWall:
 		extraCommands = ""
 		if "params" in kargs.keys():
 			extraCommands += " " + kargs["params"] + " "
+
+			if "--data" in kargs["params"]:
+				line = kargs["params"].split(" ")
+				filename = line[line.index("--data") + 1]
+				filename = filename.replace("@", "").replace('"', '')
+				with open(filename, "r") as f:
+					file_data = f.read()
+				self.log(f"Address object: {file_data}")
 		
 		if "username" in kargs.keys() and "password" in kargs.keys():
 			extraCommands += " -u " + kargs["username"] + ":" + kargs["password"]
@@ -384,7 +392,8 @@ class SonicWall:
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		try:
 			groupName_encoded=quote(groupName)
-			web = "https://" + self.host + "/api/sonicos/address-groups/ipv4/name/" + groupName_encoded
+			# web = "https://" + self.host + "/api/sonicos/address-groups/ipv4/name/" + groupName_encoded
+			web = "https://" + self.host + "/api/sonicos/address-groups/ipv4"
 			filename = "addressObject.dat"
 			with open(filename, "w") as f:
 				f.write(str(json))
