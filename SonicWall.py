@@ -18,7 +18,7 @@ class SonicWall:
 		self.host = host
 		self.headers = {}
 		self.headers["status"] = {}
-		self.log_level = LogLevel.INFO
+		self.log_level = LogLevel.VERBOSE
 
 		self.proxy_host="127.0.0.1"
 		self.proxy_port=8888
@@ -313,6 +313,7 @@ class SonicWall:
 			return True
 		else:
 			self.log(f"'{msg}' failed.  Status:{statusCode}/{statusFull}", msgLogLevel=LogLevel.NOTICE)
+			self.log("Full HTTP Response from Request:", req, msgLogLevel=LogLevel.ERROR)
 			self.log("Exiting function:" + functionName, msgLogLevel=LogLevel.VERBOSE)
 			if throwErrorOnFailure:
 				raise RuntimeError(f"Failed to get API request status, '{msg}' from:\nWeb:{web}\nStatus:{statusCode}/{statusFull}\nCurl:{self.last_curl_command}")
