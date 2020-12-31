@@ -20,12 +20,16 @@ class SonicWall:
 		self.headers["status"] = {}
 		self.log_level = LogLevel.INFO
 
-		self.proxy_host=""
-		self.proxy_port=-1
+		self.proxy_host="127.0.0.1"
+		self.proxy_port=8888
 		self.proxy_enable=False
 		self.always_params= ""
 		self.text_response = ""
 		self.last_curl_command = ""
+		if self.proxy_enable:
+			self.proxy = {"host" : self.proxy_host, "port" : self.proxy_port}
+		else:
+			self.proxy = {}
 
 	@staticmethod
 	def connectToSonicwall(ip="192.168.71.3"):	#Todo:How to make this function return SonicWall? -> SonicWall does not work
@@ -33,7 +37,7 @@ class SonicWall:
 		sw = SonicWall("192.168.71.3")
 		sw.always_params = "--connect-timeout 5 --insecure --include"
 		sw.log_level=LogLevel.DEBUG
-		sw.proxy_enable=True
+		sw.proxy_enable=False
 		sw.proxy_host="127.0.0.1"
 		sw.proxy_port=8888
 		sw.logout(throwErrorOnFailure=False)
@@ -207,7 +211,6 @@ class SonicWall:
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		self.log(f"Logging out of {self.host}...", msgLogLevel=LogLevel.NOTICE)
 
-		proxy = {"host" : "127.0.0.1", "port" : 8888}
 		headers = {
 			"Accept" : "*/*",
 			"Expect" : "",	#if this is not set, PyCurl will respond with pycurl.error: (56, ''), unless the server sends what PyCurl is expecting (a corresponding Expect).  See https://gms.tf/when-curl-sends-100-continue.html
@@ -216,7 +219,7 @@ class SonicWall:
 			# "User-Agent" : "curl/7.50.3"
 		}
 		web = "https://" + self.host + "/api/sonicos/auth"
-		req = self.request(web, proxy=proxy, headers = headers, method="delete", timeout=5, throwErrorOnFailure=False)
+		req = self.request(web, proxy=self.proxy, headers = headers, method="delete", timeout=5, throwErrorOnFailure=False)
 		self.log("Logout status", self.headers["status"], msgLogLevel=LogLevel.INFO)
 		if self.checkStatus("Logout of Sonicwall", web, req, throwErrorOnFailure=throwErrorOnFailure):
 			self.log("Logout successful", msgLogLevel=LogLevel.INFO)
@@ -231,10 +234,9 @@ class SonicWall:
 	def getIPv4AddressObjectByName(self, name: str) -> AddressObject:
 		from urllib.parse import quote
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-		proxy = {"host" : "127.0.0.1", "port" : 8888}
 		headers = {}
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/name/" + quote(name)
-		req = self.request(web, proxy=proxy, headers=headers, method="get")
+		req = self.request(web, proxy=self.proxy, headers=headers, method="get")
 		self.log("Get address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
 		if self.checkStatus("Get address object", web, req, throwErrorOnFailure=True):
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
@@ -249,10 +251,9 @@ class SonicWall:
 	def getArrayIPv4AddressObjects(self):
 		from urllib.parse import quote
 		self.log("Starting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
-		proxy = {"host" : "127.0.0.1", "port" : 8888}
 		headers = {}
 		web = "https://" + self.host + "/api/sonicos/address-objects/ipv4/"
-		req = self.request(web, proxy=proxy, headers=headers, method="get")
+		req = self.request(web, proxy=self.proxy, headers=headers, method="get")
 		self.log("Get address object status", self.headers["status"], msgLogLevel=LogLevel.INFO)
 		if self.checkStatus("Get address object", web, req, throwErrorOnFailure=True):
 			self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
