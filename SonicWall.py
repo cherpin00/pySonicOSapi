@@ -2,9 +2,11 @@
 # Refer to here for LogLevels....
 # https://support.solarwinds.com/SuccessCenter/s/article/Syslog-Severity-levels
 
-from functions import *
 import sys
 from enum import Enum
+import logging
+
+from functions import *
 from logger import *
 from AddressObject import *
 
@@ -12,9 +14,12 @@ class AuthType(Enum):
 	BASIC = 0
 	DIGEST = 1
 
-class SonicWall:	
+class SonicWall:
 	required_prefix = "AUTO"
 	def __init__(self, host):
+		self.logger = createLogger()
+		self.logger.setLevel(logging.DEBUG)
+		self.logger.info("Creating new sonic wall object" + "-"*100) #TODO: Identify sonicwall object with unique value
 		self.host = host
 		self.headers = {}
 		self.headers["status"] = {}
@@ -141,6 +146,17 @@ class SonicWall:
 		self.log(f"Detailed Request Info, Method:{method} to Address:{web}\nkargs:\n{kargs_str}\n----------", msgLogLevel=LogLevel.DEBUG)
 
 		self.log("Running CURL:", curlCommand, msgLogLevel=LogLevel.INFO)
+
+		self.logger.info("Running CURL:" + curlCommand)
+		if "params" in kargs.keys():
+			if "--data" in kargs["params"]:
+				line = kargs["params"].split(" ")
+				filename = line[line.index("--data") + 1]
+				filename = filename.replace("@", "").replace('"', '')
+				with open(filename, "r") as f:
+					file_data = f.read()
+				self.logger.info(f"Address object: {file_data}")
+
 		self.last_curl_command=curlCommand
 		process = subprocess.Popen(curlCommand,
 			stdout = subprocess.PIPE,

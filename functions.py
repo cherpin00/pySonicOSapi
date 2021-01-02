@@ -1,6 +1,8 @@
 from enum import Enum
+import logging
 
 from logger import Logger
+
 
 def keyValueStringToDict3(keyValueString: str, fieldSep=";", keyValueSep="=", quotedIdentifier="'"):
     #Adapted from https://stackoverflow.com/questions/79968/split-a-string-by-spaces-preserving-quoted-substrings-in-python
@@ -44,7 +46,7 @@ def exceptionWithTraceback(msg:str, blnThrowError=True):
         raise RuntimeError(f"Error occurred.  See above for message details.")
 
 def getDateTime(s:str, default=None, throwOnError=True, logger=None):
-    from dateutil.parser import parse
+    from dateutil.parser import parse #pip install python-dateutil
     from datetime import datetime
     try:
         s=s.replace("_", " ")   #we see underscores in the datetime and dateutil.parser doesn't handle the underscores.
@@ -69,3 +71,26 @@ def printAddressGroup(addrgrp:dict):
         print(f"Address Object {i}: {value.getName()}, {value.getIP()}, {value.getZone()}")
         if not value.getName()==value.hiddenName:
             Logger.log(f"hiddenName and getName() are NOT equal.\nhiddenName:{value.hiddenName}\n getName():{value.getName()}")
+
+def createLogger(name=None, logfile="log.log"):
+    FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    #Create Logger
+    if name is not None:
+        logger = logging.getLogger(name)
+    else:
+        logger = logging.getLogger()
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.ERROR)
+    
+    fh = logging.FileHandler(logfile, mode="a")
+    fh.setLevel(logging.DEBUG)
+
+    formater = logging.Formatter(FORMAT)
+
+    ch.setFormatter(formater)
+    fh.setFormatter(formater)
+
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+    return logger
+    
