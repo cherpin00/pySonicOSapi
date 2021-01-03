@@ -3,3 +3,4 @@ old_venv
 .vscode 
 *.dat 
 *.out 
+.vscode/settings.json
