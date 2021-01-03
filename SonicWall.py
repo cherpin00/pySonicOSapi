@@ -39,7 +39,7 @@ class SonicWall:
 	@staticmethod
 	def connectToSonicwall(ip="192.168.71.3"):	#Todo:How to make this function return SonicWall? -> SonicWall does not work
 		#Todo:We should accept the name of a CONFIG file that includes an encrypted SW Password and other configuration settings.
-		sw = SonicWall("192.168.71.3")
+		sw = SonicWall(ip)
 		sw.always_params = "--connect-timeout 5 --insecure --include"
 		sw.log_level=LogLevel.DEBUG
 		sw.proxy_enable=False
@@ -202,6 +202,10 @@ class SonicWall:
 				raise RuntimeError("Getting status.  Did not find status in Response Headers.")
 			else:
 				self.log(f"Error getting status on Sonicwall Logout.  Was there a user logged in?", msgLogLevel=LogLevel.ERROR)
+		try:
+			self.logger.error("Sonicwall Status Message:" + self.dict_response["status"]['info'][0]["message"])
+		except:
+			self.logger.error("Sonicwall Status Message: failed to get message from sonicwall response.")
 		self.log("Exiting function:" + sys._getframe().f_code.co_name, msgLogLevel=LogLevel.VERBOSE)
 		r=self.text_response
 		return r
@@ -416,7 +420,7 @@ class SonicWall:
 			req = self.request(web, "put", params=' --data "@' + filename + '" ', headers={"Content-type":"application/json"})
 			return self.checkStatus(f"Adding address object, {addressObjectName}, to Address Group, {groupName}", web, req, sys._getframe().f_code.co_name)
 		except:
-			exceptionWithTraceback(f"Adding Sonicwall Address Object, {addressObjectName}, to Address Group, {groupName}.", blnThrowError=False)
+			exceptionWithTraceback(f"Error occurred Adding Sonicwall Address Object, {addressObjectName}, to Address Group, {groupName}.", blnThrowError=False)
 			return False
 
 	def deleteOldestAddressObjectByLastUpdated(self, addrgrp: AddressGroup, maxGroupSize: int=100):

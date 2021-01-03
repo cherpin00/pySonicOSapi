@@ -5,7 +5,9 @@ if __name__ == "__main__":
     sw = SonicWall.connectToSonicwall()
     addr = sw.getIPv4AddressObjectByName("caleb_hello")
     group = sw.getIPv4AddressGroupByName("my_AUTO_Blacklist")
-    group.addToGroupOnSonicwall("caleb_hello", sw)
+    if  not group.addToGroupOnSonicwall("caleb_hello", sw):
+        print("Warning: Adding caleb_hello to my_AUTO_Blacklist failed.")
+    
     sw.commit()
     sw.logout()
 
