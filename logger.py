@@ -12,7 +12,7 @@ class LogLevel(Enum):
 	def __ge__(self, other):
 		return self.value >= other.value
 class Logger():
-	LOG_LEVEL=LogLevel.INFO
+	LOG_LEVEL=LogLevel.NOTICE
 	@staticmethod
 	def log(msg, args=[], msgLogLevel=LogLevel.INFO, logEachLine=True):
 		#Todo: we don't want the surrounding parenthesis around each argument.  Need to refactor how we're stripping this.  Is there a more efficient way to do this?

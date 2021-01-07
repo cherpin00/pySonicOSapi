@@ -1,5 +1,10 @@
+from datetime import datetime
 from functions import *
 from logger import *
+
+		
+
+
 class AddressObject:
 	def __init__(self, ip, hiddenName="", zone="WAN", eventCreated="", eventSource="pySonicOSapi", sourceZone="", destinationZone="", country="", descr="", messageID: int=-1, numOccur: int=1, updated: str="", created: str=""):
 		from datetime import datetime
@@ -11,6 +16,7 @@ class AddressObject:
 			# createAddressObject from 
 			#     NAME LOV.
 			#     Details (each of the details are passed in)
+		self.keys = {"eventCreated":"evtCreated", "country":"", "sourceZone":"srcZone", "destinationZone":"dstZone", "ip":"", "created":"", "updated":"", "numOccur":"", "eventSource":"", "messageID":"msgID", "descr":""}
 		self.hiddenName = hiddenName  #this is what was used to create the object.  getName() will equal this if nothing has been changed since creation
 		self.prefixName="AUTO_type1_" #All object names will begin with this
 		self.sourceZone = zone  #For GeoIP Blocked, this would be WAN - (we would not want to block LAN SourceZones)
@@ -62,12 +68,14 @@ class AddressObject:
 
 	def getName(self):
 		rvalue = self.__dict__["prefixName"] + ";"
-		# keys = ["eventCreated", "country", "sourceZone", "destinationZone", "ip", "created", "updated", "numOccur", "eventSource", "messageID", "descr"]
-		keys = {"eventCreated":"evtCreated", "country":"", "sourceZone":"srcZone", "destinationZone":"dstZone", "ip":"", "created":"", "updated":"", "numOccur":"", "eventSource":"", "messageID":"msgID", "descr":""}
+		keys = self.keys
 		for key,value in keys.items():
 			if value=="":
 				value=key
-			rvalue += value + "=" + str(self.__dict__[str(key)]) + ";"
+			# rvalue += value + "=" + str(self.__dict__[str(key)]) + ";"
+			# print("key", key, value)
+			# print("rvalue", rvalue)
+			rvalue += value + "=" + str(self.__dict__.get(str(key), "")) + ";"
 		#Todo:Test removal of trailing semicolon(;)
 		if rvalue[-1]==";":
 			rvalue=rvalue[:-1]
@@ -75,6 +83,23 @@ class AddressObject:
 			raise RuntimeError(f"invalid length of Name.  Sonicwall only supports up to 200 characters.  Name:{rvalue}") 
 		return rvalue
 		# return f"{self.prefixName};eventCreated={self.eventCreated}Country={self.country};sourceZone={self.sourceZone};destZone={self.destinationZone}"
+	
+	# def getName2(self):
+	# 	rvalue = self.__dict__["prefixName"] + ";"
+	# 	# keys = ["eventCreated", "country", "sourceZone", "destinationZone", "ip", "created", "updated", "numOccur", "eventSource", "messageID", "descr"]
+	# 	keys = {"eventCreated":"evtCreated", "country":"", "sourceZone":"srcZone", "destinationZone":"dstZone", "ip":"", "created":"", "updated":"", "numOccur":"", "eventSource":"", "messageID":"msgID", "descr":""}
+	# 	keys = {"ip":"", "lastThreat":"", "updated":"", "lastProt":"", "created":"", "numOccur":""}
+	# 	for key,value in keys.items():
+	# 		if value=="":
+	# 			value=key
+	# 		rvalue += value + "=" + str(self.__dict__[str(key)]) + ";"
+	# 	#Todo:Test removal of trailing semicolon(;)
+	# 	if rvalue[-1]==";":
+	# 		rvalue=rvalue[:-1]
+	# 	if len(rvalue)>200:
+	# 		raise RuntimeError(f"invalid length of Name.  Sonicwall only supports up to 200 characters.  Name:{rvalue}") 
+	# 	return rvalue
+	# 	# return f"{self.prefixName};eventCreated={self.eventCreated}Country={self.country};sourceZone={self.sourceZone};destZone={self.destinationZone}"
 
 	def __str__(self):
 		str = ("name: " + self.hiddenName) + "\n" + \
@@ -120,11 +145,47 @@ class AddressObject:
 		dontCares = ["created"]
 		return self.compareFromDict(other.__dict__, dontCares)
 
+class addressObjectWithDict2(AddressObject):
+	def __init__(self, dataDict:dict):
+		if "ip" not in dataDict:
+			raise RuntimeError("IP is a required field.")
+		# if "prefixName" not in dataDict:
+		# 	raise RuntimeError("prefixName is a required field.")
+		# if dataDict["prefixName"][:4]!="AUTO":
+		# 	raise RuntimeError("prefixName must begin with AUTO.")
+		for k, v in dataDict.items():
+			setattr(self, k, v)
+
+		self.keys = {"eventCreated":"evtCreated", "country":"", "sourceZone":"srcZone", "destinationZone":"dstZone", "ip":"", "created":"", "updated":"", "numOccur":"", "eventSource":"", "messageID":"msgID", "descr":""}
+		self.created=datetime.now().strftime("%Y-%m-%d_%H:%M:%S") #this is date Addr Object was created
+		self.updated=self.created #this is date the AddrObject was last updated
+		self.numOccur=1 #this is number of times the AddrObject was modified (to count # of times this IP has hit the firewall)
+
+		eventCreated=AddressObjectWithDict.getValue(dataDict, "eventCreated", "")
+		eventSource=AddressObjectWithDict.getValue(dataDict, "eventSource", "")
+		sourceZone=AddressObjectWithDict.getValue(dataDict, "sourceZone", "")
+		destinationZone=AddressObjectWithDict.getValue(dataDict, "destinationZone", "")
+		country=AddressObjectWithDict.getValue(dataDict, "country", "")
+		descr=AddressObjectWithDict.getValue(dataDict, "descr", "")
+		messageID=AddressObjectWithDict.getValue(dataDict, "messageID", "-1")
+		numOccur=int(AddressObjectWithDict.getValue(dataDict, "numOccur", 1))
+		updated=AddressObjectWithDict.getValue(dataDict, "updated", "")
+		created=AddressObjectWithDict.getValue(dataDict, "created", "")
+
+		#TODO: HiddenName, zone, and ip should not be requeried to be passed into the dictinary in this case they are?
+		super().__init__(self.ip, hiddenName = self.hiddenName, zone = self.zone, eventCreated=eventCreated, eventSource=eventSource\
+				, sourceZone=sourceZone, destinationZone=destinationZone, country=country, descr=descr\
+				, messageID=messageID, numOccur=numOccur, updated=updated, created=created)
+
+		self.prefixName=dataDict.get("prefixName", "AUTO_unknown")	#set this here in case the parent class changes it
+
+		# super().__init__(self.ip)
+
 class AddressObjectWithParams(AddressObject):
 	def __init__(self, name: str, ip: str, zone: str="WAN"):
 		super().__init__(ip, hiddenName=name, zone=zone)
 
-class AddressObjectWithDict(AddressObject):
+class AddressObjectWithDict(addressObjectWithDict2):
 	labels = {"eventCreated":"evtCreated", "country":"", "sourceZone":"srcZone", "destinationZone":"dstZone", "ip":"", "created":"", "updated":"", "numOccur":"", "eventSource":"", "messageID":"msgID", "descr":""}
 	@staticmethod
 	def getValue(dict, keyToGet, default):
@@ -133,9 +194,11 @@ class AddressObjectWithDict(AddressObject):
 			key=keyToGet
 		r=dict[key] if key in dict.keys() else default
 		return r
+	
 	def __init__(self, ipv4Dict: dict):
 		#Todo: Need to validate the dict_response.  It should have Zone, IP, Name and be structured correctly.
 		#AUTO_type1_eventCreated=;country=;sourceZone=WAN;destinationZone=;ip=2.1.1.1;created=2020-05-31 20:22:35.957445;updated=;numOccur=1;eventSource=pySonicOSapi;messageID=-1;descr=;"
+
 		try:
 			name=ipv4Dict["address_object"]["ipv4"]["name"]
 			ip=ipv4Dict["address_object"]["ipv4"]["host"]["ip"]
@@ -147,22 +210,47 @@ class AddressObjectWithDict(AddressObject):
 					#Todo:Test obj.ip.
 					ip2=obj["ip"]
 					Logger.log(f"Warning: IP Address changing from: {ip2}, to: {ip}", msgLogLevel=LogLevel.WARNING)
+			else:
+				obj["ip"] = ip
 			if "srcZone" in obj.keys():
 				if not obj["srcZone"]==zone:
 					#Todo:Test obj.sourceZone.
 					srcZone2=obj["srcZone"]
 					Logger.log(f"Warning: sourceZone changing from: {srcZone2}, to: {zone}", msgLogLevel=LogLevel.WARNING)
+	
+			# eventCreated=AddressObjectWithDict.getValue(obj, "eventCreated", "")
+			# eventSource=AddressObjectWithDict.getValue(obj, "eventSource", "")
+			# sourceZone=AddressObjectWithDict.getValue(obj, "sourceZone", "")
+			# destinationZone=AddressObjectWithDict.getValue(obj, "destinationZone", "")
+			# country=AddressObjectWithDict.getValue(obj, "country", "")
+			# descr=AddressObjectWithDict.getValue(obj, "descr", "")
+			# messageID=AddressObjectWithDict.getValue(obj, "messageID", "-1")
+			# numOccur=int(AddressObjectWithDict.getValue(obj, "numOccur", 1))
+			# updated=AddressObjectWithDict.getValue(obj, "updated", "")
+			# created=AddressObjectWithDict.getValue(obj, "created", "")
 
-			eventCreated=AddressObjectWithDict.getValue(obj, "eventCreated", "")
-			eventSource=AddressObjectWithDict.getValue(obj, "eventSource", "")
-			sourceZone=AddressObjectWithDict.getValue(obj, "sourceZone", "")
-			destinationZone=AddressObjectWithDict.getValue(obj, "destinationZone", "")
-			country=AddressObjectWithDict.getValue(obj, "country", "")
-			descr=AddressObjectWithDict.getValue(obj, "descr", "")
-			messageID=AddressObjectWithDict.getValue(obj, "messageID", "-1")
-			numOccur=int(AddressObjectWithDict.getValue(obj, "numOccur", 1))
-			updated=AddressObjectWithDict.getValue(obj, "updated", "")
-			created=AddressObjectWithDict.getValue(obj, "created", "")
+			# #If obj didn't have an eventCreated, then make sure it does.
+			# obj["eventCreated"] = eventCreated
+			# obj["eventSource"]=eventSource
+			# obj["sourceZone"]=sourceZone
+			# obj["destinationZone"]=destinationZone
+			# obj["country"]=country
+			# obj["descr"]=descr
+			# obj["messageID"]=messageID
+			# obj["numOccur"]=numOccur
+			# obj["updated"]=updated
+			# obj["created"]=created
+
+			if "hiddenName" in obj:
+				raise RuntimeError(f"hiddenName cannot be a field in the Name of an AddressObject.  Name={name}")
+
+			obj["prefixName"]=list(obj.keys())[0]	#the prefixName doesn't have a key/value pair.  The first item should always be the prefixName.
+
+			obj["hiddenName"]=name
+			obj["zone"]=zone
+
+			super().__init__(obj)
+
 			# eventSource=obj["evtSource"] if "evtSource" in obj.keys() else "pySonicOSapi"
 			# sourceZone=obj["sourceZone"] if "sourceZone" in obj.keys() else ""
 			# destinationZone=obj["dstZone"] if "destinationZone" in obj.keys() else ""
@@ -172,9 +260,9 @@ class AddressObjectWithDict(AddressObject):
 			# numOccur=int(obj["numOccur"]) if "numOccur" in obj.keys() else 1
 			# updated=obj["updated"] if "updated" in obj.keys() else ""
 			# created=obj["created"] if "created" in obj.keys() else ""
-			super().__init__(ip, hiddenName = name, zone = zone, eventCreated=eventCreated, eventSource=eventSource\
-				, sourceZone=sourceZone, destinationZone=destinationZone, country=country, descr=descr\
-				, messageID=messageID, numOccur=numOccur, updated=updated, created=created)
+			# super().__init__(ip, hiddenName = name, zone = zone, eventCreated=eventCreated, eventSource=eventSource\
+			# 	, sourceZone=sourceZone, destinationZone=destinationZone, country=country, descr=descr\
+			# 	, messageID=messageID, numOccur=numOccur, updated=updated, created=created)
 		except:
 			exceptionWithTraceback(f"Error creating Address Object with dictionary.\nIPv4 Dict:{ipv4Dict}")
 
